@@ -34,7 +34,7 @@
 #' 99th percentile of the daily max values (p99).
 #' @param title Title for the output plot.
 #' @param verbose Enable debug messages.
-#' @param na.rm Remove any NAs in timestamps.(default: FALSE) 
+#' @param na.rm Remove any NAs in timestamps.(default: FALSE)
 #' @return The returned value is a list with the following components.
 #' @return \item{anoms}{Data frame containing timestamps, values, and optionally expected values.}
 #' @return \item{plot}{A graphical object if plotting was requested by the user. The plot contains
@@ -66,7 +66,7 @@ AnomalyDetectionTs <- function(x, max_anoms = 0.10, direction = 'pos',
                                alpha = 0.05, only_last = NULL, threshold = 'None',
                                e_value = FALSE, longterm = FALSE, piecewise_median_period_weeks = 2, plot = FALSE,
                                y_log = FALSE, xlabel = '', ylabel = 'count',
-                               title = NULL, verbose=FALSE, na.rm = FALSE, aggregator = "mean", desired_gran = NULL){
+                               title = NULL, verbose=FALSE, na.rm = FALSE, aggregator = mean, desired_gran = NULL){
 
   # Check for supported inputs types
   if(!is.data.frame(x)){
@@ -84,11 +84,11 @@ AnomalyDetectionTs <- function(x, max_anoms = 0.10, direction = 'pos',
   if (any((names(x) == c("timestamp", "count")) == FALSE)) {
     colnames(x) <- c("timestamp", "count")
   }
-  
+
   if(!is.logical(na.rm)){
     stop("na.rm must be either TRUE (T) or FALSE (F)")
   }
-  
+
   # Deal with NAs in timestamps
   if(any(is.na(x$timestamp))){
     if(na.rm){
@@ -147,6 +147,9 @@ AnomalyDetectionTs <- function(x, max_anoms = 0.10, direction = 'pos',
   } else {
     title <- paste(title, " : ", sep="")
   }
+  if(!is.function(aggregator)){
+    stop("aggregator must be a function")
+  }
 
   # -- Main analysis: Perform S-H-ESD
 
@@ -163,30 +166,30 @@ AnomalyDetectionTs <- function(x, max_anoms = 0.10, direction = 'pos',
     num_days_per_line <- 1
   }
 
-  # Aggregate data to minutely if secondly -- 
+  # Aggregate data to minutely if secondly --
   # Fixed bug to keep proper granularity saved on 'gran' variable
   if((gran == "sec") || (gran == "ms")){
-    x <- format_timestamp(aggregate(x[2], format(x[1], "%Y-%m-%d %H:%M:00"), eval(parse(text=aggregator))))
+    x <- format_timestamp(aggregate(x[2], format(x[1], "%Y-%m-%d %H:%M:00"), FUN = aggregator))
 	gran = "min"
   }
-  
+
   # Allow for aggregate data in a different granularity than the one defined arbitrarily:
   if (!is.null(desired_gran)){
-	if (desired_gran == "day"){
-	  x <- format_timestamp(aggregate(x[2], format(x[1], "%Y-%m-%d 00:00:00"), eval(parse(text=aggregator))))
-	  gran = "day"
-	}
-	if (desired_gran == "hr"){
-	  x <- format_timestamp(aggregate(x[2], format(x[1], "%Y-%m-%d %H:00:00"), eval(parse(text=aggregator))))
-	  gran = "hr"
-	}
-	if (desired_gran == "min"){
-	  x <- format_timestamp(aggregate(x[2], format(x[1], "%Y-%m-%d %H:%M:00"), eval(parse(text=aggregator))))
-	  gran = "min"
-	}
+  	if (desired_gran == "day"){
+  	  x <- format_timestamp(aggregate(x[2], by = format(x[1], "%Y-%m-%d 00:00:00"), FUN = aggregator))
+  	  gran = "day"
+  	}
+  	if (desired_gran == "hr"){
+  	  x <- format_timestamp(aggregate(x[2], by = format(x[1], "%Y-%m-%d %H:00:00"), FUN = aggregator))
+  	  gran = "hr"
+  	}
+  	if (desired_gran == "min"){
+  	  x <- format_timestamp(aggregate(x[2], by = format(x[1], "%Y-%m-%d %H:%M:00"), FUN = aggregator))
+  	  gran = "min"
+  	}
   }
-  
-  
+
+
 
   period = switch(gran,
                   min = 1440,
@@ -363,10 +366,10 @@ AnomalyDetectionTs <- function(x, max_anoms = 0.10, direction = 'pos',
 
   # Fix to make sure date-time is correct and that we retain hms at midnight
   all_anoms[[1]] <- format(all_anoms[[1]], format="%Y-%m-%d %H:%M:%S")
-  
+
   # Store expected values if set by user
   if(e_value) {
-    anoms <- data.frame(timestamp=all_anoms[[1]], anoms=all_anoms[[2]], 
+    anoms <- data.frame(timestamp=all_anoms[[1]], anoms=all_anoms[[2]],
                         expected_value=subset(seasonal_plus_trend[[2]], as.POSIXlt(seasonal_plus_trend[[1]], tz="UTC") %in% all_anoms[[1]]),
                         stringsAsFactors=FALSE)
   } else {
